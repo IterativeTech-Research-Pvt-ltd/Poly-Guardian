@@ -1,0 +1,24 @@
+{
+  "name": "poly-guardian-backend",
+  "version": "1.0.0",
+  "description": "Poly-Guardian - Edge-AI polyhouse assistant (Express backend + React/Vite client)",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test:gemini": "node test-gemini.js",
+    "client:install": "npm --prefix client install",
+    "build": "npm --prefix client run build",
+    "dev": "concurrently -n api,web -c green,cyan \"node server.js\" \"npm --prefix client run dev\""
+  },
+  "dependencies": {
+    "@google/genai": "^2.13.0",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "multer": "^2.2.0"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.4"
+  }
+}
