@@ -124,7 +124,7 @@ export default function Agronomist({ lang }) {
   return (
     <>
       <div className="hero">
-        <span className="hero-eyebrow">🤖 Digital Agronomist · Marwari · Hindi · English</span>
+        <span className="hero-eyebrow">🤖 Digital Agronomist · Hinglish · Hindi · English</span>
         <h2>Ask anything about your polyhouse.</h2>
         <p className="sub">
           Gen-AI advisor for Rajasthan crops. It knows your live context, trap counts and
@@ -186,7 +186,7 @@ export default function Agronomist({ lang }) {
           </div>
           <div className="voice-note">
             <div className="t-label">Voice-first</div>
-            <p>Tap the mic — speak in Hindi, Marwari or English.</p>
+            <p>Tap the mic — speak in Hindi, Hinglish or English.</p>
           </div>
         </div>
       </div>
