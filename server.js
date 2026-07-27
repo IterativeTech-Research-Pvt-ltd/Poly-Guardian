@@ -38,6 +38,7 @@ const LANG_INSTR = {
   en: "English",
   hinglish: "Roman Hindi — Hindi written in English letters (friendly Hinglish)",
   hi: "Hindi in the Devanagari script (हिंदी)",
+  mr: "Marwari (the Rajasthani language) written in the Devanagari script",
 };
 const resolveLang = (key) => LANG_INSTR[key] || LANG_INSTR.hinglish;
 
@@ -149,6 +150,59 @@ async function analyzeLeafGroq(buffer, mimeType, answerLanguage) {
   });
 }
 
+// ---- Pest density: shared prompt + both providers ----
+function pestPrompt(answerLanguage) {
+  return `You are "Poly-Guardian AI", a pest-monitoring assistant.
+Look at the photo — a sticky trap, or a leaf/plant with insects — and estimate the pest infestation.
+
+Rules:
+- Write farmer-facing text ("crop_risk", "explanation", "action") in ${answerLanguage}. Keep "pest" and "density" recognisable (a short English name is fine).
+- If no insects are visible or the photo is unclear, set "pest" to "None", "density" to "None", "count" to "0", and ask for a clearer trap/leaf photo in the explanation.
+- "density" must be exactly one of: None / Low / Medium / High (in English).
+- "density_percent" is a number from 0 to 100 estimating how heavy the infestation is (0 = none, ~1-33 = Low, ~34-66 = Medium, ~67-100 = High) — keep it consistent with "density".
+- "count" is your best estimate of how many pests are visible — a number or short range like "20-30".
+
+Reply with ONLY this JSON (no extra text):
+{
+  "pest": "main pest name, e.g. Whitefly / Thrips / Aphid",
+  "count": "estimated count, e.g. 25 or 20-30",
+  "density": "None / Low / Medium / High",
+  "density_percent": a number from 0 to 100,
+  "crop_risk": "which crops this pest threatens",
+  "explanation": "2-3 lines on what you see and the risk level",
+  "action": "what the farmer should do now — organic first, then chemical with dosage"
+}`;
+}
+
+async function analyzePestGemini(buffer, mimeType, answerLanguage) {
+  const ai = getClient();
+  const response = await ai.models.generateContent({
+    model: MODEL,
+    contents: [
+      { role: "user", parts: [
+        { text: pestPrompt(answerLanguage) },
+        { inlineData: { mimeType: mimeType || "image/jpeg", data: buffer.toString("base64") } },
+      ] },
+    ],
+    config: { responseMimeType: "application/json", temperature: 0.4 },
+  });
+  return response.text;
+}
+
+async function analyzePestGroq(buffer, mimeType, answerLanguage) {
+  const dataUrl = `data:${mimeType || "image/jpeg"};base64,${buffer.toString("base64")}`;
+  return groqChat({
+    model: GROQ_VISION_MODEL,
+    json: true,
+    messages: [
+      { role: "user", content: [
+        { type: "text", text: pestPrompt(answerLanguage) },
+        { type: "image_url", image_url: { url: dataUrl } },
+      ] },
+    ],
+  });
+}
+
 // ---- Agronomist chat: Gemini + Groq implementations ----
 const AGRONOMIST_SYSTEM = `You are the "Poly-Guardian Digital Agronomist", a warm, practical farm advisor for smallholder polyhouse farmers in Rajasthan, India.
 
@@ -233,6 +287,30 @@ app.post("/ask", async (req, res) => {
   } catch (e) {
     console.error("ASK ERROR:", e.message);
     res.status(500).json({ error: "Agronomist could not reply", detail: e.message });
+  }
+});
+
+// ---- Route: pest density scan ----
+app.post("/pest", upload.single("image"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No image received" });
+    const answerLanguage = resolveLang(req.body && req.body.lang);
+    const raw = await withFallback(
+      "pest",
+      () => analyzePestGemini(req.file.buffer, req.file.mimetype, answerLanguage),
+      () => analyzePestGroq(req.file.buffer, req.file.mimetype, answerLanguage),
+    );
+    let data;
+    try {
+      const clean = String(raw).replace(/```json|```/g, "").trim();
+      data = JSON.parse(clean);
+    } catch {
+      return res.status(502).json({ error: "AI did not return clean JSON", raw });
+    }
+    res.json(data);
+  } catch (e) {
+    console.error("PEST ERROR:", e.message);
+    res.status(500).json({ error: "Pest scan failed", detail: e.message });
   }
 });
 
