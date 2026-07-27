@@ -4,3 +4,5 @@ leaf.jpg
 uploads
 dist
 client/dist
+.expo/
+mobile/.expo/
