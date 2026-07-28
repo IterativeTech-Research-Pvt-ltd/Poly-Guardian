@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Poly-Guardian · Admin</title>
+<style>
+  :root{
+    --bg:#EDF3EB; --ink:#16311E; --mut:#6E8175; --mut2:#93A497; --line:#E4ECE1; --card:#fff;
+    --green:#45A24C; --greenD:#2F7C3E; --greenWash:#EAF3E7; --greenChip:#E2F0E0;
+    --red:#EF3B57; --redWash:#FDECEF; --amber:#F0A83A; --amberInk:#B7791F; --amberWash:#FCF1DC;
+    --blue:#2C5FA8; --blueWash:#E7EEF9;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--ink);background:radial-gradient(1100px 460px at 50% -10%,#E8F3E9,rgba(232,243,233,0) 60%),var(--bg);min-height:100vh}
+  .wrap{max-width:1080px;margin:0 auto;padding:20px 20px 60px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:0 10px 30px rgba(20,50,30,.06);padding:20px}
+  .hidden{display:none!important}
+  button{font-family:inherit;cursor:pointer;border:none;background:none}
+  .btn{background:var(--green);color:#fff;font-weight:700;font-size:15px;padding:13px 20px;border-radius:12px}
+  .btn:hover{filter:brightness(1.05)}
+  input{font-family:inherit;font-size:15px;padding:13px 15px;border:1px solid var(--line);border-radius:12px;width:100%;color:var(--ink);outline:none}
+  input:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(69,162,76,.15)}
+
+  /* login */
+  .login{max-width:380px;margin:12vh auto 0;text-align:center}
+  .logo{width:56px;height:56px;border-radius:16px;background:linear-gradient(150deg,#6BBE48,var(--greenD));display:grid;place-items:center;margin:0 auto 16px}
+  .logo svg{width:28px;height:28px}
+  .login h1{font-size:22px;font-weight:800;letter-spacing:-.4px}
+  .login p{color:var(--mut);font-size:13.5px;margin:4px 0 20px}
+  .err{color:var(--red);font-size:13px;font-weight:600;margin-top:10px;min-height:16px}
+
+  /* header */
+  header{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+  header .logo{width:42px;height:42px;border-radius:12px;margin:0}
+  header .logo svg{width:23px;height:23px}
+  header h1{font-size:19px;font-weight:800;letter-spacing:-.3px}
+  header p{font-size:12px;color:var(--mut)}
+  header .sp{flex:1}
+  .logout{color:var(--mut);font-weight:600;font-size:13.5px;border:1px solid var(--line);padding:8px 14px;border-radius:10px}
+  .logout:hover{background:#F2F6F0}
+
+  /* stats */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}
+  .stat{padding:18px}
+  .stat .v{font-size:32px;font-weight:800;letter-spacing:-1px;font-variant-numeric:tabular-nums}
+  .stat .l{font-size:13px;color:var(--mut);font-weight:600;margin-top:4px}
+
+  /* tabs */
+  .tabs{display:flex;gap:6px;background:#F2F6F0;padding:5px;border-radius:12px;width:max-content;margin-bottom:16px}
+  .tab{font-size:14px;font-weight:700;color:var(--mut);padding:9px 18px;border-radius:9px}
+  .tab.active{background:var(--green);color:#fff}
+
+  /* table */
+  table{width:100%;border-collapse:collapse}
+  th{font-size:11.5px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--mut2);text-align:left;padding:0 10px 12px}
+  td{padding:13px 10px;border-top:1px solid var(--line);font-size:14px}
+  tr.click{cursor:pointer}
+  tr.click:hover td{background:var(--greenWash)}
+  .name{font-weight:700}
+  .pill{display:inline-block;background:var(--greenChip);color:var(--greenD);font-weight:800;font-size:12.5px;padding:4px 11px;border-radius:999px}
+  .muted{color:var(--mut)}
+  .empty{text-align:center;color:var(--mut);padding:40px 10px;font-size:14px}
+
+  /* kind + severity chips */
+  .chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;padding:4px 10px;border-radius:999px}
+  .k-leaf{background:var(--greenChip);color:var(--greenD)}
+  .k-pest{background:var(--amberWash);color:var(--amberInk)}
+  .sev-high{background:var(--redWash);color:var(--red)}
+  .sev-medium{background:var(--amberWash);color:var(--amberInk)}
+  .sev-low,.sev-none{background:var(--greenChip);color:var(--greenD)}
+
+  /* season cards */
+  .seasons{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  .season{padding:18px;border-top:4px solid var(--green)}
+  .season.rabi{border-top-color:var(--blue)}
+  .season.kharif{border-top-color:var(--green)}
+  .season.zaid{border-top-color:var(--amber)}
+  .season h3{font-size:18px;font-weight:800}
+  .season .sub{font-size:12.5px;color:var(--mut);margin-top:2px}
+  .season .big{font-size:28px;font-weight:800;margin-top:12px}
+  .season .big small{font-size:13px;color:var(--mut);font-weight:600}
+  .season .lbl{font-size:11px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:var(--mut2);margin:14px 0 8px}
+  .taglist{display:flex;flex-wrap:wrap;gap:6px}
+  .tag{font-size:12px;font-weight:600;background:#F2F6F0;border:1px solid var(--line);padding:5px 10px;border-radius:8px}
+  .tag b{color:var(--greenD)}
+
+  /* back link */
+  .back{color:var(--greenD);font-weight:700;font-size:13.5px;display:inline-flex;align-items:center;gap:5px;margin-bottom:14px}
+
+  .banner{background:var(--amberWash);color:var(--amberInk);border-radius:12px;padding:12px 15px;font-size:13.5px;font-weight:600;margin-bottom:16px}
+
+  @media(max-width:760px){.stats{grid-template-columns:repeat(2,1fr)}.seasons{grid-template-columns:1fr}.wrap{padding:14px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- LOGIN -->
+  <div id="loginView" class="login">
+    <div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6"/></svg></div>
+    <h1>Poly-Guardian Admin</h1>
+    <p>Enter the admin password to continue</p>
+    <div class="card">
+      <input id="pwd" type="password" placeholder="Admin password" autocomplete="current-password" />
+      <button class="btn" style="width:100%;margin-top:12px" onclick="login()">Log in</button>
+      <div id="loginErr" class="err"></div>
+    </div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div id="dashView" class="hidden">
+    <header>
+      <div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6"/></svg></div>
+      <div><h1>Admin Portal</h1><p>Poly-Guardian · farmer data &amp; seasons</p></div>
+      <div class="sp"></div>
+      <button class="logout" onclick="logout()">Log out</button>
+    </header>
+
+    <div id="dbBanner" class="banner hidden">⚠️ Database not configured — add SUPABASE_URL and SUPABASE_SERVICE_KEY to .env and restart the server. No farmer data will appear until then.</div>
+
+    <div class="stats" id="stats"></div>
+
+    <div class="tabs">
+      <button class="tab active" data-tab="farmers" onclick="showTab('farmers')">Farmers</button>
+      <button class="tab" data-tab="seasons" onclick="showTab('seasons')">Crops · Seasons</button>
+    </div>
+
+    <!-- farmers list -->
+    <div id="farmersTab">
+      <div class="card">
+        <div id="farmersList"></div>
+      </div>
+    </div>
+
+    <!-- one farmer's history -->
+    <div id="farmerTab" class="hidden">
+      <button class="back" onclick="showTab('farmers')">← All farmers</button>
+      <div class="card"><div id="farmerDetail"></div></div>
+    </div>
+
+    <!-- seasons -->
+    <div id="seasonsTab" class="hidden">
+      <div class="seasons" id="seasonsGrid"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  let KEY = sessionStorage.getItem("pg_admin_key") || "";
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+  const SEASON_REF = {
+    Kharif: ["Rice","Maize","Cotton","Sugarcane","Bajra","Jowar","Soybean","Groundnut","Tur","Guar"],
+    Rabi: ["Wheat","Barley","Mustard","Gram (Chickpea)","Peas","Lentil","Potato","Onion","Cumin","Fenugreek"],
+    Zaid: ["Watermelon","Muskmelon","Cucumber","Bitter gourd","Pumpkin","Fodder"],
+  };
+  const SEASON_SUB = { Kharif: "Jun–Oct · monsoon", Rabi: "Nov–Mar · winter", Zaid: "Apr–May · summer" };
+
+  async function api(path) {
+    const res = await fetch(path, { headers: { "x-admin-key": KEY } });
+    if (res.status === 401) { logout(); throw new Error("unauthorized"); }
+    return res.json();
+  }
+
+  async function login() {
+    const pwd = $("pwd").value;
+    $("loginErr").textContent = "";
+    try {
+      const res = await fetch("/admin/login", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ password: pwd }) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { $("loginErr").textContent = data.error || "Wrong password"; return; }
+      KEY = pwd; sessionStorage.setItem("pg_admin_key", KEY);
+      openDashboard();
+    } catch { $("loginErr").textContent = "Could not reach the server."; }
+  }
+  function logout() { KEY = ""; sessionStorage.removeItem("pg_admin_key"); $("dashView").classList.add("hidden"); $("loginView").classList.remove("hidden"); }
+
+  async function openDashboard() {
+    $("loginView").classList.add("hidden");
+    $("dashView").classList.remove("hidden");
+    showTab("farmers");
+    loadStats();
+    loadFarmers();
+  }
+
+  async function loadStats() {
+    try {
+      const s = await api("/admin/api/stats");
+      $("dbBanner").classList.add("hidden");
+      const tiles = [["Farmers",s.farmers],["Total scans",s.scans],["Leaf scans",s.leaf],["Pest scans",s.pest]];
+      $("stats").innerHTML = tiles.map(([l,v]) => `<div class="card stat"><div class="v">${v}</div><div class="l">${l}</div></div>`).join("");
+    } catch (e) {
+      if (String(e.message).includes("unauthorized")) return;
+      $("dbBanner").classList.remove("hidden");
+      $("stats").innerHTML = "";
+    }
+  }
+
+  async function loadFarmers() {
+    try {
+      const farmers = await api("/admin/api/farmers");
+      if (!farmers.length) { $("farmersList").innerHTML = '<div class="empty">No farmers have signed up yet.</div>'; return; }
+      $("farmersList").innerHTML = `<table><thead><tr><th>Name</th><th>Village</th><th>Phone</th><th>Scans</th><th>Joined</th></tr></thead><tbody>${
+        farmers.map((f) => `<tr class="click" onclick="openFarmer('${f.id}')">
+          <td class="name">${esc(f.name)}</td>
+          <td class="muted">${esc(f.village) || "—"}</td>
+          <td class="muted">${esc(f.phone) || "—"}</td>
+          <td><span class="pill">${f.scanCount}</span></td>
+          <td class="muted">${new Date(f.created_at).toLocaleDateString()}</td>
+        </tr>`).join("")
+      }</tbody></table>`;
+    } catch (e) { if (!String(e.message).includes("unauthorized")) $("farmersList").innerHTML = '<div class="empty">Could not load farmers.</div>'; }
+  }
+
+  async function openFarmer(id) {
+    showTab("farmer");
+    $("farmerDetail").innerHTML = '<div class="empty">Loading…</div>';
+    try {
+      const { farmer, scans } = await api("/admin/api/farmer/" + id);
+      if (!farmer) { $("farmerDetail").innerHTML = '<div class="empty">Farmer not found.</div>'; return; }
+      const head = `<div style="margin-bottom:14px"><div style="font-size:20px;font-weight:800">${esc(farmer.name)}</div>
+        <div class="muted" style="font-size:13.5px;margin-top:3px">${esc(farmer.village)||"—"} · ${esc(farmer.phone)||"no phone"} · joined ${new Date(farmer.created_at).toLocaleDateString()}</div></div>`;
+      if (!scans.length) { $("farmerDetail").innerHTML = head + '<div class="empty">No scans yet.</div>'; return; }
+      const rows = scans.map((s) => {
+        const sev = (s.severity||"").toLowerCase();
+        const sevK = sev.includes("high")?"high":sev.includes("med")?"medium":sev.includes("low")?"low":"none";
+        return `<tr>
+          <td><span class="chip k-${s.kind}">${s.kind==="pest"?"🐛 Pest":"🌿 Leaf"}</span></td>
+          <td class="name">${esc(s.result)||"—"}</td>
+          <td class="muted">${esc(s.crop)||"—"}</td>
+          <td>${s.severity?`<span class="chip sev-${sevK}">${esc(s.severity)}${s.confidence!=null?" · "+s.confidence+"%":""}</span>`:(s.confidence!=null?s.confidence+"%":"—")}</td>
+          <td class="muted">${esc(s.season)||"—"}</td>
+          <td class="muted">${new Date(s.created_at).toLocaleString()}</td>
+        </tr>`;
+      }).join("");
+      $("farmerDetail").innerHTML = head + `<table><thead><tr><th>Type</th><th>Result</th><th>Crop</th><th>Severity / %</th><th>Season</th><th>When</th></tr></thead><tbody>${rows}</tbody></table>`;
+    } catch (e) { if (!String(e.message).includes("unauthorized")) $("farmerDetail").innerHTML = '<div class="empty">Could not load.</div>'; }
+  }
+
+  async function loadSeasons() {
+    let data = { Rabi:{count:0,crops:{}}, Kharif:{count:0,crops:{}}, Zaid:{count:0,crops:{}} };
+    try { data = await api("/admin/api/seasons"); } catch (e) { if (String(e.message).includes("unauthorized")) return; }
+    const order = ["Kharif","Rabi","Zaid"];
+    $("seasonsGrid").innerHTML = order.map((name) => {
+      const d = data[name] || { count:0, crops:{} };
+      const top = Object.entries(d.crops||{}).sort((a,b)=>b[1]-a[1]).slice(0,8);
+      const scanned = top.length ? top.map(([c,n])=>`<span class="tag">${esc(c)} <b>${n}</b></span>`).join("") : '<span class="muted" style="font-size:12.5px">No scans this season yet</span>';
+      const ref = (SEASON_REF[name]||[]).map((c)=>`<span class="tag">${esc(c)}</span>`).join("");
+      return `<div class="card season ${name.toLowerCase()}">
+        <h3>${name}</h3><div class="sub">${SEASON_SUB[name]}</div>
+        <div class="big">${d.count}<small> scans</small></div>
+        <div class="lbl">Scanned this season</div><div class="taglist">${scanned}</div>
+        <div class="lbl">Common ${name} crops</div><div class="taglist">${ref}</div>
+      </div>`;
+    }).join("");
+  }
+
+  function showTab(name) {
+    $("farmersTab").classList.toggle("hidden", name !== "farmers");
+    $("farmerTab").classList.toggle("hidden", name !== "farmer");
+    $("seasonsTab").classList.toggle("hidden", name !== "seasons");
+    document.querySelectorAll(".tab").forEach((t)=>t.classList.toggle("active", t.dataset.tab === name));
+    if (name === "seasons") loadSeasons();
+  }
+
+  // auto-open if already logged in this session
+  if (KEY) openDashboard();
+  $("pwd") && $("pwd").addEventListener("keydown", (e)=>{ if(e.key==="Enter") login(); });
+</script>
+</body>
+</html>

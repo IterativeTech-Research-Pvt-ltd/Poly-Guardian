@@ -5,6 +5,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import "dotenv/config";
 import { GoogleGenAI } from "@google/genai";
+import { dbEnabled, registerFarmer, saveScan, getStats, getFarmers, getFarmerScans, getSeasonSummary } from "./db.js";
 
 const app = express();
 app.use(cors());
@@ -260,6 +261,19 @@ app.post("/detect", upload.single("image"), async (req, res) => {
     }
 
     data.confidence = Math.round(Number(data.confidence) || 0);
+
+    if (dbEnabled) {
+      saveScan({
+        farmerId: req.body && req.body.farmerId,
+        kind: "leaf",
+        crop: data.crop,
+        result: data.disease,
+        severity: data.severity,
+        confidence: data.confidence,
+        lang: req.body && req.body.lang,
+      }).catch((e) => console.error("saveScan(leaf):", e.message));
+    }
+
     // UI shape: { crop, disease, confidence, severity, explanation, organic, chemical, prevention, warning }
     res.json(data);
   } catch (e) {
@@ -307,12 +321,62 @@ app.post("/pest", upload.single("image"), async (req, res) => {
     } catch {
       return res.status(502).json({ error: "AI did not return clean JSON", raw });
     }
+    if (dbEnabled) {
+      saveScan({
+        farmerId: req.body && req.body.farmerId,
+        kind: "pest",
+        crop: null,
+        result: data.pest,
+        severity: data.density,
+        confidence: Number(data.density_percent),
+        lang: req.body && req.body.lang,
+      }).catch((e) => console.error("saveScan(pest):", e.message));
+    }
+
     res.json(data);
   } catch (e) {
     console.error("PEST ERROR:", e.message);
     res.status(500).json({ error: "Pest scan failed", detail: e.message });
   }
 });
+
+// ---- Farmer registration (one-time sign-up from the app) ----
+app.post("/register", async (req, res) => {
+  try {
+    if (!dbEnabled) return res.status(503).json({ error: "Database not configured" });
+    const { name, village, phone } = req.body || {};
+    if (!name || !String(name).trim()) return res.status(400).json({ error: "Name is required" });
+    const id = await registerFarmer({ name: String(name).trim(), village, phone });
+    res.json({ id });
+  } catch (e) {
+    console.error("REGISTER ERROR:", e.message);
+    res.status(500).json({ error: "Registration failed", detail: e.message });
+  }
+});
+
+// ---- Admin portal API (password-protected via ADMIN_PASSWORD) ----
+function adminAuth(req, res, next) {
+  if (!process.env.ADMIN_PASSWORD) return res.status(500).json({ error: "Admin password not set (ADMIN_PASSWORD in .env)" });
+  if (req.get("x-admin-key") !== process.env.ADMIN_PASSWORD) return res.status(401).json({ error: "Wrong password" });
+  next();
+}
+const adminGuard = (handler) => [adminAuth, async (req, res) => {
+  try { res.json(await handler(req)); }
+  catch (e) { res.status(500).json({ error: e.message }); }
+}];
+
+app.post("/admin/login", (req, res) => {
+  if (!process.env.ADMIN_PASSWORD) return res.status(500).json({ error: "Admin password not set (ADMIN_PASSWORD in .env)" });
+  if ((req.body && req.body.password) === process.env.ADMIN_PASSWORD) return res.json({ ok: true });
+  return res.status(401).json({ error: "Wrong password" });
+});
+app.get("/admin/api/stats", ...adminGuard(() => getStats()));
+app.get("/admin/api/farmers", ...adminGuard(() => getFarmers()));
+app.get("/admin/api/farmer/:id", ...adminGuard((req) => getFarmerScans(req.params.id)));
+app.get("/admin/api/seasons", ...adminGuard(() => getSeasonSummary()));
+
+// Serve the admin portal page (admin/index.html) at /admin
+app.use("/admin", express.static(path.join(__dirname, "admin")));
 
 // Health check — open http://localhost:5001/health in the browser to test.
 app.get("/health", (req, res) =>
