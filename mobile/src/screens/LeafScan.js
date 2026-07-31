@@ -8,7 +8,7 @@ import { useLang } from "../LangContext";
 import { useScans, addScan } from "../scanStore";
 import { relTime, sevKey } from "../util";
 import { localizeTerm, sevLabel } from "../i18n";
-import { detectLeaf } from "../api";
+import { detectLeaf, translateFields } from "../api";
 
 const RX = [
   { key: "organic", titleKey: "rx_organic", icon: "leaf-outline", bg: theme.greenChip, color: theme.greenD },
@@ -17,6 +17,7 @@ const RX = [
   { key: "warning", titleKey: "rx_warning", icon: "warning-outline", bg: theme.redWash, color: theme.red, warn: true },
 ];
 const isBlank = (v) => !v || v === "-" || v === "N/A" || /^\s*$/.test(v);
+const DENS_COLORS = { high: ["#F5883A", "#EF4E5A"], medium: ["#F5C542", "#F0A93A"], low: ["#6DBE45", "#4CAF50"], none: ["#6DBE45", "#4CAF50"] };
 
 export default function LeafScan({ navigation, route }) {
   const { lang, t } = useLang();
@@ -59,6 +60,7 @@ export default function LeafScan({ navigation, route }) {
     setView("loading");
     try {
       const data = await detectLeaf(imageUri, lang);
+      data.lang = lang;
       setResult(data);
       const isUnknown = /unknown/i.test(data.disease || "") || /unknown/i.test(data.crop || "");
       if (!isUnknown) addScan(data);
@@ -128,6 +130,24 @@ export default function LeafScan({ navigation, route }) {
 }
 
 function Result({ data, onAgain, t, lang }) {
+  const [tr, setTr] = useState(null);
+  const [translating, setTranslating] = useState(false);
+  useEffect(() => {
+    const src = data.lang || "hinglish";
+    if (lang && lang !== src) {
+      const fields = {};
+      ["explanation", "organic", "chemical", "prevention", "warning", "pesticide"].forEach((k) => {
+        if (data[k] && data[k] !== "-") fields[k] = data[k];
+      });
+      if (!Object.keys(fields).length) { setTr(null); return; }
+      setTranslating(true);
+      translateFields(fields, lang).then(setTr).catch(() => setTr(null)).finally(() => setTranslating(false));
+    } else {
+      setTr(null);
+    }
+  }, [lang, data]);
+  const F = (k) => (tr && tr[k] != null ? tr[k] : data[k]);
+
   const disease = data.disease || "Unknown";
   const isHealthy = /healthy/i.test(disease);
   const isUnknown = /unknown/i.test(disease) || /unknown/i.test(data.crop || "");
@@ -141,9 +161,14 @@ function Result({ data, onAgain, t, lang }) {
 
   const sev = sevColors[sevKey(data.severity)];
   const rxItems = RX.filter((it) => !isBlank(data[it.key]));
+  const hasPest = data.pest && String(data.pest).trim() !== "-" && !/^(none|no)\b/i.test(String(data.pest).trim());
+  const pdKey = sevKey(data.pest_density);
+  const pdRaw = Number(data.pest_density_percent);
+  const pdPct = Number.isFinite(pdRaw) ? Math.max(0, Math.min(100, Math.round(pdRaw))) : ({ high: 100, medium: 66, low: 33, none: 8 }[pdKey] || 8);
+  const pdColor = sevColors[pdKey];
 
   return (
-    <View>
+    <View style={{ opacity: translating ? 0.55 : 1 }}>
       <View style={s.verdict}>
         <View style={[s.status, { backgroundColor: status.bg }]}>
           <Ionicons name={status.icon} size={26} color="#fff" />
@@ -173,7 +198,7 @@ function Result({ data, onAgain, t, lang }) {
       )}
 
       {data.explanation ? (
-        <View style={s.explain}><Text style={s.explainText}>{data.explanation}</Text></View>
+        <View style={s.explain}><Text style={s.explainText}>{F("explanation")}</Text></View>
       ) : null}
 
       {rxItems.length > 0 && (
@@ -186,10 +211,29 @@ function Result({ data, onAgain, t, lang }) {
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={s.rxHead}>{t(it.titleKey)}</Text>
-                <Text style={s.rxBody}>{data[it.key]}</Text>
+                <Text style={s.rxBody}>{F(it.key)}</Text>
               </View>
             </View>
           ))}
+        </View>
+      )}
+
+      {hasPest && (
+        <View style={{ marginTop: 18 }}>
+          <Text style={s.rxTitle}>{t("pest_detected_label")}</Text>
+          <View style={s.pestBox}>
+            <View style={s.pestHead}>
+              <View style={[s.rxIc, { backgroundColor: "#F7E3B0" }]}><Ionicons name="bug" size={20} color={theme.amberInk} /></View>
+              <Text style={s.pestName}>{localizeTerm(data.pest, lang)}</Text>
+            </View>
+            <View style={s.pestDensRow}>
+              <Chip label={sevLabel(pdKey, lang, data.pest_density)} bg={pdColor.bg} color={pdColor.ink} />
+              <Text style={[s.pestPct, { color: pdColor.ink }]}>{pdPct}%</Text>
+            </View>
+            <Bar pct={pdPct} colors={DENS_COLORS[pdKey]} />
+            {data.pest_count ? <Text style={s.pestMeta}>{t("pest_count_label")}: <Text style={{ fontWeight: "800", color: theme.ink }}>{String(data.pest_count)}</Text></Text> : null}
+            {data.pesticide && data.pesticide !== "-" ? <Text style={s.pestMeta}><Text style={{ fontWeight: "800", color: theme.ink }}>{t("pest_pesticide_label")}:</Text> {F("pesticide")}</Text> : null}
+          </View>
         </View>
       )}
 
@@ -224,6 +268,12 @@ const s = StyleSheet.create({
   rxIc: { width: 40, height: 40, borderRadius: 12, alignItems: "center", justifyContent: "center" },
   rxHead: { fontSize: 13.5, fontWeight: "800", color: theme.ink },
   rxBody: { fontSize: 13.5, color: theme.inkSoft, marginTop: 2, lineHeight: 19 },
+  pestBox: { borderWidth: 1, borderColor: "#F5E0B8", backgroundColor: theme.amberWash, borderRadius: 14, padding: 14 },
+  pestHead: { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 12 },
+  pestName: { fontSize: 16, fontWeight: "800", color: theme.ink, flex: 1 },
+  pestDensRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 },
+  pestPct: { fontSize: 20, fontWeight: "800", fontVariant: ["tabular-nums"] },
+  pestMeta: { fontSize: 13.5, color: theme.inkSoft, marginTop: 8, lineHeight: 19 },
   row: { flexDirection: "row", alignItems: "center", gap: 11, borderWidth: 1, borderColor: theme.line, borderRadius: 13, padding: 13, marginTop: 10 },
   rowPressed: { backgroundColor: theme.greenWash, borderColor: "#BFD8C2" },
   dot: { width: 9, height: 9, borderRadius: 5 },

@@ -357,6 +357,60 @@ const PEST = {
 };
 Object.keys(PEST).forEach((l) => Object.assign(STRINGS[l], PEST[l]));
 
+const PEST_RX = {
+  en: { pest_prevention_label: "Precautions to take", pest_pesticide_label: "Preferred pesticide" },
+  hinglish: { pest_prevention_label: "Bachav ke tarike", pest_pesticide_label: "Behtar keetnashak" },
+  hi: { pest_prevention_label: "बचाव के उपाय", pest_pesticide_label: "पसंदीदा कीटनाशक" },
+  mr: { pest_prevention_label: "बचाव रा उपाय", pest_pesticide_label: "बढ़िया कीटनाशक" },
+};
+Object.keys(PEST_RX).forEach((l) => Object.assign(STRINGS[l], PEST_RX[l]));
+
+// Leaf Scan now also detects pests — merged-scan strings (override scan_subtitle).
+const SCAN_MERGE = {
+  en: { pest_detected_label: "Pest detected", scan_subtitle: "Snap a leaf and get the disease, any pests, a confidence score, and a full prescription in seconds." },
+  hinglish: { pest_detected_label: "Keet mila", scan_subtitle: "Patti ki photo lo aur bimari, keet, confidence score aur poora ilaaj kuch hi second me pao." },
+  hi: { pest_detected_label: "कीट मिला", scan_subtitle: "पत्ती की फोटो लें और कुछ ही सेकंड में बीमारी, कीट, कॉन्फिडेंस स्कोर और पूरा इलाज पाएं।" },
+  mr: { pest_detected_label: "कीड़ो मिल्यो", scan_subtitle: "पत्ती री फोटू लो अर कुछई सेकंड में बीमारी, कीड़ो, कॉन्फिडेंस अर पूरो इलाज पाओ।" },
+};
+Object.keys(SCAN_MERGE).forEach((l) => Object.assign(STRINGS[l], SCAN_MERGE[l]));
+
+// Digital Twin strings.
+const TWIN = {
+  en: {
+    tab_twin: "Twin", twin_eyebrow: "🛰️ Live · Simulated", twin_title: "Digital Twin",
+    twin_subtitle: "A live virtual model of your polyhouses — climate, risk and pests, updating in real time.",
+    twin_temp: "Temp", twin_humidity: "Humidity", twin_mite: "Mite risk", twin_fungal: "Fungal risk", twin_thrips: "Thrips pressure",
+    twin_alerts: "Live alerts", twin_no_alerts: "All zones look healthy right now. 🌿", twin_node: "Node",
+    twin_sim_note: "Simulated live data — the real LoRaWAN sensors plug into this same twin in Phase 2.",
+    twin_action_mite: "Apply localized biological control", twin_action_fungal: "Increase ventilation now", twin_action_thrips: "Check the sticky traps",
+  },
+  hinglish: {
+    tab_twin: "Twin", twin_eyebrow: "🛰️ Live · Simulated", twin_title: "Digital Twin",
+    twin_subtitle: "Aapke polyhouse ka live virtual model — climate, risk aur keet, real time me update hote hue.",
+    twin_temp: "Taap", twin_humidity: "Nami", twin_mite: "Mite risk", twin_fungal: "Fungal risk", twin_thrips: "Thrips pressure",
+    twin_alerts: "Live alerts", twin_no_alerts: "Abhi sab zones theek lag rahe hain. 🌿", twin_node: "Node",
+    twin_sim_note: "Simulated live data — asli LoRaWAN sensor Phase 2 me isi twin se jud jayenge.",
+    twin_action_mite: "Localized biological control lagayein", twin_action_fungal: "Abhi ventilation badhayein", twin_action_thrips: "Sticky trap check karein",
+  },
+  hi: {
+    tab_twin: "ट्विन", twin_eyebrow: "🛰️ लाइव · सिमुलेटेड", twin_title: "डिजिटल ट्विन",
+    twin_subtitle: "आपके पॉलीहाउस का लाइव वर्चुअल मॉडल — जलवायु, जोखिम और कीट, रियल-टाइम में अपडेट होते हुए।",
+    twin_temp: "तापमान", twin_humidity: "नमी", twin_mite: "माइट जोखिम", twin_fungal: "फंगल जोखिम", twin_thrips: "थ्रिप्स दबाव",
+    twin_alerts: "लाइव अलर्ट", twin_no_alerts: "अभी सभी ज़ोन स्वस्थ लग रहे हैं। 🌿", twin_node: "नोड",
+    twin_sim_note: "सिमुलेटेड लाइव डेटा — असली LoRaWAN सेंसर फेज़ 2 में इसी ट्विन से जुड़ेंगे।",
+    twin_action_mite: "स्थानीय जैविक नियंत्रण लगाएं", twin_action_fungal: "अभी वेंटिलेशन बढ़ाएं", twin_action_thrips: "स्टिकी ट्रैप जांचें",
+  },
+  mr: {
+    tab_twin: "ट्विन", twin_eyebrow: "🛰️ लाइव · सिमुलेटेड", twin_title: "डिजिटल ट्विन",
+    twin_subtitle: "थारे पॉलीहाउस रो लाइव वर्चुअल मॉडल — जलवायु, खतरो अर कीड़ा, रियल-टाइम में अपडेट होय र्या।",
+    twin_temp: "ताप", twin_humidity: "नमी", twin_mite: "माइट खतरो", twin_fungal: "फंगल खतरो", twin_thrips: "थ्रिप्स दबाव",
+    twin_alerts: "लाइव अलर्ट", twin_no_alerts: "अबे सगळा ज़ोन ठीक दीख र्या। 🌿", twin_node: "नोड",
+    twin_sim_note: "सिमुलेटेड लाइव डेटा — असली LoRaWAN सेंसर फेज़ 2 में इणी ट्विन सूं जुड़सी।",
+    twin_action_mite: "स्थानीय जैविक नियंत्रण लगाओ", twin_action_fungal: "अबे वेंटिलेशन बढ़ाओ", twin_action_thrips: "स्टिकी ट्रैप जांचो",
+  },
+};
+Object.keys(TWIN).forEach((l) => Object.assign(STRINGS[l], TWIN[l]));
+
 // Live-context values per language (labels come from STRINGS).
 export const CONTEXT_VALUES = {
   en: ["3 zones · Capsicum, Cucumber, Rose", "34.2°C · 68% RH", "1.9 kPa (mite risk)", "Whitefly · +18% in 24h", "Spinosad · 4 days ago"],
@@ -364,3 +418,12 @@ export const CONTEXT_VALUES = {
   hi: ["3 ज़ोन · शिमला मिर्च, खीरा, गुलाब", "34.2°C · 68% नमी", "1.9 kPa (माइट रिस्क)", "सफेद मक्खी · +18% (24 घंटे में)", "Spinosad · 4 दिन पहले"],
   mr: ["3 ज़ोन · शिमला मिर्च, ककड़ी, गुलाब", "34.2°C · 68% नमी", "1.9 kPa (माइट रिस्क)", "सफेद माखी · +18% (24 घंटा में)", "Spinosad · 4 दिन पैलां"],
 };
+
+// --- Registration screen strings, merged into STRINGS ---
+const REGISTER = {
+  en: { reg_title: "Welcome, farmer!", reg_sub: "Tell us a bit about you to get started.", reg_name: "Your name", reg_village: "Village", reg_phone: "Phone number", reg_button: "Get started", reg_name_required: "Please enter your name" },
+  hinglish: { reg_title: "Swagat hai, kisan!", reg_sub: "Shuru karne ke liye apne baare me thoda batao.", reg_name: "Aapka naam", reg_village: "Gaon", reg_phone: "Phone number", reg_button: "Shuru karein", reg_name_required: "Kripya apna naam likhein" },
+  hi: { reg_title: "स्वागत है, किसान!", reg_sub: "शुरू करने के लिए अपने बारे में थोड़ा बताएं।", reg_name: "आपका नाम", reg_village: "गाँव", reg_phone: "फ़ोन नंबर", reg_button: "शुरू करें", reg_name_required: "कृपया अपना नाम लिखें" },
+  mr: { reg_title: "पधारो, किसान!", reg_sub: "शुरू करण खातर थारे बारे में थोड़ो बताओ।", reg_name: "थारो नाम", reg_village: "गांव", reg_phone: "फोन नंबर", reg_button: "शुरू करो", reg_name_required: "किरपा कर’र थारो नाम लिखो" },
+};
+Object.keys(REGISTER).forEach((l) => Object.assign(STRINGS[l], REGISTER[l]));

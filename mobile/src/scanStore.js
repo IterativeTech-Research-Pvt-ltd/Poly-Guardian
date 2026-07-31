@@ -7,7 +7,7 @@ const now = Date.now();
 
 const SEED = [
   {
-    id: "seed-1", t: now - 12 * 60000,
+    id: "seed-1", t: now - 12 * 60000, lang: "hinglish",
     crop: "Capsicum", disease: "Powdery Mildew", confidence: 92, severity: "Medium",
     explanation: "Patton par safed powder jaisi parat aur peelapan. Yeh powdery mildew fungus hai, jo nami aur kam hawa me tezi se failta hai.",
     organic: "Neem oil (5 ml/L) ya baking soda (5 g/L) ka spray har 7 din me karein. Kharab patte hata dein.",
@@ -16,7 +16,7 @@ const SEED = [
     warning: "Agar 4-5 din me safed parat poore paudhe par fail jaye ya phool girne lagein, expert se milein.",
   },
   {
-    id: "seed-2", t: now - 70 * 60000,
+    id: "seed-2", t: now - 70 * 60000, lang: "hinglish",
     crop: "Rose", disease: "Black Spot", confidence: 88, severity: "High",
     explanation: "Patton par kaale gol dhabbe jinke charon or peela ghera. Black spot fungus (Diplocarpon rosae) — nami me tezi se failta hai.",
     organic: "Prabhavit patte tod kar jala dein. Neem oil (5 ml/L) ka spray, upar se paani na dein.",
@@ -25,7 +25,7 @@ const SEED = [
     warning: "Agar poora paudha patra-heen ho raha ho to turant krishi visheshagya se milein.",
   },
   {
-    id: "seed-3", t: now - 27 * 3600000,
+    id: "seed-3", t: now - 27 * 3600000, lang: "hinglish",
     crop: "Cucumber", disease: "Downy Mildew", confidence: 79, severity: "Medium",
     explanation: "Patton ki upari satah par peele koney-daar dhabbe, neeche halka bengani-safed powder. Downy mildew thandi nami me failta hai.",
     organic: "Prabhavit patte hata dein. Copper-based (Bordeaux mixture) ka halka spray karein.",

@@ -161,6 +161,7 @@
   async function api(path) {
     const res = await fetch(path, { headers: { "x-admin-key": KEY } });
     if (res.status === 401) { logout(); throw new Error("unauthorized"); }
+    if (!res.ok) throw new Error("api error " + res.status);
     return res.json();
   }
 

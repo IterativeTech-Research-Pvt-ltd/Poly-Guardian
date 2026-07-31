@@ -70,12 +70,13 @@ async function withFallback(label, geminiFn, groqFn) {
 // ---- Shared prompt for leaf diagnosis (used by both providers) ----
 function leafPrompt(answerLanguage) {
   return `You are "Poly-Guardian AI", a farmer-friendly plant doctor.
-Look carefully at the leaf photo and identify the disease.
+Look carefully at the leaf photo. Identify any DISEASE and also any PEST/insect visible on the leaf.
 
 Rules:
-- Write ALL farmer-facing text (explanation, organic, chemical, prevention, warning) in ${answerLanguage}. Keep "crop", "disease" and "severity" recognisable (a short English/botanical name is fine).
+- Write ALL farmer-facing text (explanation, organic, chemical, prevention, warning, pesticide) in ${answerLanguage}. Keep "crop", "disease", "severity" and "pest" recognisable (a short English/botanical name is fine).
 - If the photo has no plant/leaf or is unclear, set "disease" to "Unknown" and ask for a clearer photo in the explanation.
-- If the leaf is completely healthy, set "disease" to "Healthy" and "severity" to "None".
+- If the leaf is completely healthy (no disease), set "disease" to "Healthy" and "severity" to "None".
+- If you see insects/pests on the leaf, set "pest" to the pest name, estimate "pest_count" (number/range on the leaf), "pest_density" (None/Low/Medium/High) and "pest_density_percent" (0-100 for how heavy the infestation is), and give a "pesticide" with dosage. If no pest is visible, set "pest" to "None", "pest_count" to "0", "pest_density" to "None", "pest_density_percent" to 0 and "pesticide" to "-".
 - "confidence" is your own estimate (0-100) of how sure the identification is.
 
 Reply with ONLY this JSON (no extra text):
@@ -84,11 +85,16 @@ Reply with ONLY this JSON (no extra text):
   "disease": "disease name, or Healthy, or Unknown",
   "confidence": a number between 0 and 100,
   "severity": "None / Low / Medium / High",
-  "explanation": "2-3 lines on what the disease is",
+  "explanation": "2-3 lines on the disease and any pest you see",
   "organic": "organic / home remedy in simple words",
   "chemical": "chemical medicine name and dosage",
   "prevention": "2-3 ways to prevent it",
-  "warning": "when the farmer should urgently see an expert"
+  "warning": "when the farmer should urgently see an expert",
+  "pest": "main pest visible on the leaf, or None",
+  "pest_count": "estimated number of pests on the leaf, e.g. 5-10, or 0",
+  "pest_density": "None / Low / Medium / High",
+  "pest_density_percent": a number from 0 to 100,
+  "pesticide": "recommended pesticide with dosage for the pest, or -"
 }`;
 }
 
@@ -171,7 +177,9 @@ Reply with ONLY this JSON (no extra text):
   "density_percent": a number from 0 to 100,
   "crop_risk": "which crops this pest threatens",
   "explanation": "2-3 lines on what you see and the risk level",
-  "action": "what the farmer should do now — organic first, then chemical with dosage"
+  "action": "what the farmer should do now — organic first, then chemical with dosage",
+  "prevention": "2-3 precautions the farmer can take to stop this pest coming back",
+  "pesticide": "the single best recommended pesticide with exact dosage, e.g. Imidacloprid 17.8% SL — 0.3 ml/litre"
 }`;
 }
 
@@ -240,6 +248,22 @@ async function askGroq({ message, history, system }) {
   return groqChat({ model: GROQ_TEXT_MODEL, messages });
 }
 
+// ---- Translate a result's free-text fields into another language (text only) ----
+async function translateGemini(fields, answerLanguage) {
+  const ai = getClient();
+  const prompt = `Translate the string VALUES of this JSON into ${answerLanguage}, using simple, farmer-friendly wording. Keep the SAME keys. Chemical/pesticide product names and dosages may stay as-is. Reply with ONLY the JSON.\n\n${JSON.stringify(fields)}`;
+  const r = await ai.models.generateContent({
+    model: MODEL,
+    contents: [{ role: "user", parts: [{ text: prompt }] }],
+    config: { responseMimeType: "application/json", temperature: 0.3 },
+  });
+  return r.text;
+}
+async function translateGroq(fields, answerLanguage) {
+  const prompt = `Translate the string VALUES of this JSON into ${answerLanguage}, using simple farmer-friendly wording. Keep the SAME keys. Reply with ONLY the JSON.\n\n${JSON.stringify(fields)}`;
+  return groqChat({ model: GROQ_TEXT_MODEL, json: true, messages: [{ role: "user", content: prompt }] });
+}
+
 // ---- Route: leaf diagnosis ----
 app.post("/detect", upload.single("image"), async (req, res) => {
   try {
@@ -304,6 +328,27 @@ app.post("/ask", async (req, res) => {
   }
 });
 
+// ---- Route: translate a result into the chosen language ----
+app.post("/translate", async (req, res) => {
+  try {
+    const { fields, lang } = req.body || {};
+    if (!fields || typeof fields !== "object") return res.status(400).json({ error: "No fields to translate" });
+    const answerLanguage = resolveLang(lang);
+    const raw = await withFallback(
+      "translate",
+      () => translateGemini(fields, answerLanguage),
+      () => translateGroq(fields, answerLanguage),
+    );
+    let out;
+    try { out = JSON.parse(String(raw).replace(/```json|```/g, "").trim()); }
+    catch { return res.status(502).json({ error: "AI did not return clean JSON", raw }); }
+    res.json(out);
+  } catch (e) {
+    console.error("TRANSLATE ERROR:", e.message);
+    res.status(500).json({ error: "Translate failed", detail: e.message });
+  }
+});
+
 // ---- Route: pest density scan ----
 app.post("/pest", upload.single("image"), async (req, res) => {
   try {
@@ -361,6 +406,7 @@ function adminAuth(req, res, next) {
   next();
 }
 const adminGuard = (handler) => [adminAuth, async (req, res) => {
+  if (!dbEnabled) return res.status(503).json({ error: "Database not configured" });
   try { res.json(await handler(req)); }
   catch (e) { res.status(500).json({ error: e.message }); }
 }];

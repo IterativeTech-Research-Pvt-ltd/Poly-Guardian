@@ -1,12 +1,34 @@
-// Supabase (Postgres) data layer for the admin portal.
-// If SUPABASE_URL / SUPABASE_SERVICE_KEY aren't set, the app still runs —
+// Supabase data layer for the admin portal — talks to Supabase's REST API
+// (PostgREST) with fetch, so there's no WebSocket/Node-version issue.
+// If SUPABASE_URL / SUPABASE_SERVICE_KEY aren't set, the app still runs;
 // scans just aren't recorded and the admin portal reports "not configured".
-import { createClient } from "@supabase/supabase-js";
 
 const url = process.env.SUPABASE_URL;
 const key = process.env.SUPABASE_SERVICE_KEY;
-export const dbEnabled = !!(url && key);
-const supabase = dbEnabled ? createClient(url, key, { auth: { persistSession: false } }) : null;
+export const dbEnabled = !!(url && key && !/your-project|your_service/.test(`${url}${key}`));
+
+const BASE = url ? `${url.replace(/\/$/, "")}/rest/v1` : null;
+const headers = {
+  apikey: key,
+  Authorization: `Bearer ${key}`,
+  "Content-Type": "application/json",
+};
+
+async function sbGet(pathAndQuery) {
+  const res = await fetch(`${BASE}/${pathAndQuery}`, { headers });
+  if (!res.ok) throw new Error(`Supabase ${res.status}: ${(await res.text()).slice(0, 200)}`);
+  return res.json();
+}
+async function sbInsert(table, row) {
+  const res = await fetch(`${BASE}/${table}`, {
+    method: "POST",
+    headers: { ...headers, Prefer: "return=representation" },
+    body: JSON.stringify(row),
+  });
+  if (!res.ok) throw new Error(`Supabase ${res.status}: ${(await res.text()).slice(0, 200)}`);
+  const data = await res.json();
+  return Array.isArray(data) ? data[0] : data;
+}
 
 // Indian cropping seasons by sowing month.
 export function seasonForDate(d = new Date()) {
@@ -17,17 +39,12 @@ export function seasonForDate(d = new Date()) {
 }
 
 export async function registerFarmer({ name, village, phone }) {
-  const { data, error } = await supabase
-    .from("farmers")
-    .insert({ name, village: village || null, phone: phone || null })
-    .select("id")
-    .single();
-  if (error) throw new Error(error.message);
-  return data.id;
+  const row = await sbInsert("farmers", { name, village: village || null, phone: phone || null });
+  return row.id;
 }
 
 export async function saveScan(rec) {
-  const row = {
+  await sbInsert("scans", {
     farmer_id: rec.farmerId || null,
     kind: rec.kind,
     crop: rec.crop || null,
@@ -36,47 +53,48 @@ export async function saveScan(rec) {
     confidence: Number.isFinite(rec.confidence) ? Math.round(rec.confidence) : null,
     lang: rec.lang || null,
     season: seasonForDate(),
-  };
-  const { error } = await supabase.from("scans").insert(row);
-  if (error) throw new Error(error.message);
+  });
 }
 
 export async function getStats() {
-  const head = { count: "exact", head: true };
-  const [f, s, leaf, pest] = await Promise.all([
-    supabase.from("farmers").select("*", head),
-    supabase.from("scans").select("*", head),
-    supabase.from("scans").select("*", head).eq("kind", "leaf"),
-    supabase.from("scans").select("*", head).eq("kind", "pest"),
+  const [farmers, scans] = await Promise.all([
+    sbGet("farmers?select=id"),
+    sbGet("scans?select=kind"),
   ]);
-  return { farmers: f.count || 0, scans: s.count || 0, leaf: leaf.count || 0, pest: pest.count || 0 };
+  return {
+    farmers: farmers.length,
+    scans: scans.length,
+    leaf: scans.filter((s) => s.kind === "leaf").length,
+    pest: scans.filter((s) => s.kind === "pest").length,
+  };
 }
 
 export async function getFarmers() {
-  const { data: farmers, error } = await supabase
-    .from("farmers").select("*").order("created_at", { ascending: false });
-  if (error) throw new Error(error.message);
-  const { data: scans } = await supabase.from("scans").select("farmer_id");
+  const [farmers, scans] = await Promise.all([
+    sbGet("farmers?select=*&order=created_at.desc"),
+    sbGet("scans?select=farmer_id"),
+  ]);
   const counts = {};
-  (scans || []).forEach((s) => { if (s.farmer_id) counts[s.farmer_id] = (counts[s.farmer_id] || 0) + 1; });
-  return (farmers || []).map((f) => ({ ...f, scanCount: counts[f.id] || 0 }));
+  scans.forEach((s) => { if (s.farmer_id) counts[s.farmer_id] = (counts[s.farmer_id] || 0) + 1; });
+  return farmers.map((f) => ({ ...f, scanCount: counts[f.id] || 0 }));
 }
 
 export async function getFarmerScans(farmerId) {
-  const { data: farmer } = await supabase.from("farmers").select("*").eq("id", farmerId).single();
-  const { data: scans } = await supabase
-    .from("scans").select("*").eq("farmer_id", farmerId).order("created_at", { ascending: false });
-  return { farmer: farmer || null, scans: scans || [] };
+  const [farmers, scans] = await Promise.all([
+    sbGet(`farmers?id=eq.${farmerId}&select=*`),
+    sbGet(`scans?farmer_id=eq.${farmerId}&select=*&order=created_at.desc`),
+  ]);
+  return { farmer: farmers[0] || null, scans };
 }
 
 export async function getSeasonSummary() {
-  const { data: scans } = await supabase.from("scans").select("season, crop, result, kind");
+  const scans = await sbGet("scans?select=season,crop,result");
   const seasons = {
     Rabi: { count: 0, crops: {} },
     Kharif: { count: 0, crops: {} },
     Zaid: { count: 0, crops: {} },
   };
-  (scans || []).forEach((s) => {
+  scans.forEach((s) => {
     const se = seasons[s.season] || (seasons[s.season] = { count: 0, crops: {} });
     se.count++;
     const label = s.crop || s.result;

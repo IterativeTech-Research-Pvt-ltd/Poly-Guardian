@@ -10,29 +10,32 @@ import { LangContext } from "./src/LangContext";
 import { getSavedLang, saveLang, labelFor } from "./src/lang";
 import { makeT } from "./src/i18n";
 import { hydrate } from "./src/scanStore";
+import { getFarmer } from "./src/farmer";
 import { theme } from "./src/theme";
 import LanguagePicker from "./src/LanguagePicker";
+import RegisterScreen from "./src/RegisterScreen";
 import Dashboard from "./src/screens/Dashboard";
 import LeafScan from "./src/screens/LeafScan";
-import TrapMonitor from "./src/screens/TrapMonitor";
+import DigitalTwin from "./src/screens/DigitalTwin";
 import Agronomist from "./src/screens/Agronomist";
 
 const Tab = createBottomTabNavigator();
 const TAB_ICON = {
   Dashboard: "grid-outline",
   "Leaf Scan": "scan-outline",
-  "Trap Monitor": "bug-outline",
+  "Digital Twin": "pulse-outline",
   Agronomist: "chatbubbles-outline",
 };
 const TAB_KEY = {
   Dashboard: "tab_dashboard",
   "Leaf Scan": "tab_scan",
-  "Trap Monitor": "tab_trap",
+  "Digital Twin": "tab_twin",
   Agronomist: "tab_agronomist",
 };
 
 export default function App() {
   const [lang, setLang] = useState(null);
+  const [farmer, setFarmer] = useState(null);
   const [ready, setReady] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
 
@@ -40,7 +43,9 @@ export default function App() {
     (async () => {
       await hydrate();
       const saved = await getSavedLang();
+      const f = await getFarmer();
       setLang(saved);
+      setFarmer(f);
       setPickerOpen(!saved);
       setReady(true);
     })();
@@ -57,6 +62,7 @@ export default function App() {
   }
 
   const t = makeT(lang || "hinglish");
+  const showRegister = !pickerOpen && !farmer;
 
   const HeaderTitle = () => (
     <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
@@ -96,11 +102,13 @@ export default function App() {
           >
             <Tab.Screen name="Dashboard" component={Dashboard} />
             <Tab.Screen name="Leaf Scan" component={LeafScan} />
-            <Tab.Screen name="Trap Monitor" component={TrapMonitor} />
+            <Tab.Screen name="Digital Twin" component={DigitalTwin} />
             <Tab.Screen name="Agronomist" component={Agronomist} />
           </Tab.Navigator>
         </NavigationContainer>
+
         <LanguagePicker visible={pickerOpen} current={lang} onPick={pick} onClose={lang ? () => setPickerOpen(false) : null} />
+        <RegisterScreen visible={showRegister} onDone={(f) => setFarmer(f)} />
         <StatusBar style="dark" />
       </LangContext.Provider>
     </SafeAreaProvider>
